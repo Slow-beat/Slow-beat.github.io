@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <meta charset="UTF-8">
+    <title>码检通（CodeCheckTool）</title>
+    <!-- 引入 markdown-it 的脚本 -->
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
+    <!-- 引入 github-markdown.css 样式 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.css">
+    <!-- 一些简单的样式 -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .container {
+            display: flex;
+        }
+
+        #markdownInput,
+        #markdownPreview {
+            width: 50%;
+            height: 88vh;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            outline: none;
+            padding: 20px;
+            box-sizing: border-box;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+            overflow-y: auto;
+        }
+
+        #markdownInput {
+            margin-right: 10px;
+        }
+
+        /* 定义重复单词的颜色 */
+        .repeatWordGreen {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .repeatWordYellow {
+            color: #e11010;
+            font-weight: bold;
+        }
+
+        /* 样式覆盖 github-markdown.css 中的一些样式 */
+        .markdown-body {
+            box-sizing: border-box;
+            min-width: 200px;
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 45px;
+        }
+
+        .markdown-body pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        /* 版本、更新时间和作者链接样式 */
+        .info {
+            color: #777;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- 用于编辑 Markdown 的文本框 -->
+        <textarea id="markdownInput" placeholder="在这里输入 Markdown 文本...
+当前功能：
+1. 代码中出现的变量名、方法名在解释文本中会高亮显示（完全一致：绿色，仅大小写不一致：红色）
+"></textarea>
+        <!-- 用于显示 Markdown 转换后的 HTML 预览 -->
+        <div id="markdownPreview" class="markdown-body"></div>
+    </div>
+
+    <!-- 版本、更新时间和作者链接 -->
+    <div class="info">
+        当前版本：1.0.0<br>
+        更新时间：2024/4/15<br>
+        作者/反馈链接：<a href="https://applink.larkoffice.com/client/message/link/open?token=AmWL4ywfiwAEZhyaFgWEAAQ%3D"
+            target="_blank">Liam</a>
+    </div>
+
+    <script>
+        // 创建 markdown-it 实例
+        let md = window.markdownit();
+        // 获取 textarea 元素
+        let markdownInput = document.getElementById('markdownInput');
+        // 获取用于显示 Markdown 预览的 div 元素
+        let markdownPreview = document.getElementById('markdownPreview');
+        // 获取信息块元素
+        let infoBlock = document.querySelector('.info');
+        // 正则匹配变量单词
+        // let wordRegex = /[\b|\s+]([\w\.\d@])+[\s+|\b]/g;
+        let wordRegex = /\b[\w$][\w\d$]*\b/g;
+
+        // 进行正则匹配并记录每个结果匹配次数
+        function highlightRepeatedWords(codeWordCount, textWordCount, html) {
+            const set = new Set();
+            for (let word in codeWordCount) {
+                set.add(word.toLocaleLowerCase());
+            }
+            set.delete("class");
+            set.delete("code");
+            set.delete("code");
+
+            console.log(set);
+            for (let word in textWordCount) {
+                if (set.has(word.toLocaleLowerCase())) {
+                    if (codeWordCount[word]) {
+                        // 完全一致
+                        html = html.replace(new RegExp('\\b' + word + '\\b', 'g'), '<span class="repeatWordGreen">$&</span>');
+                    } else {
+                        // 大小写不一致
+                        html = html.replace(new RegExp('\\b' + word + '\\b', 'g'), '<span class="repeatWordYellow">$&</span>');
+                    }
+                }
+            }
+            return html;
+        }
+
+        // 获取所有代码块内容
+        function getAllCodeBlocksContent(text) {
+            const codeBlockPattern = /```[\s\S]*?```/g;
+            let matches = text.match(codeBlockPattern);
+
+            return matches ? Array.from(matches).join('\n') : "";
+        }
+
+        // 匹配正则并记录出现次数
+        function countWords(text, regex) {
+            let wordCounts = {};
+            let matches = text.match(regex);
+
+            for (let match of matches ? matches : []) {
+                wordCounts[match] = wordCounts[match] ? wordCounts[match] + 1 : [match];
+
+            }
+            return wordCounts;
+        }
+
+        function CodeBlocks() {
+            let codeBlocks = [];
+            const PLACEHOLDER = "PLACEHOLDER";
+            return {
+                // 保存代码块并替换为占位符
+                saveAndReplaceCodeBlocks: function (text) {
+                    // 匹配 ``` 开始的代码块
+                    var codeBlockPattern = /<pre[\s\S]*?<\/pre>/g;
+                    var index = 0;
+                    text = text.replace(codeBlockPattern, function (codeBlock) {
+                        codeBlocks.push(codeBlock);
+                        return PLACEHOLDER + index++;
+                    });
+                    return text;
+                },
+                // 恢复被替换的代码块
+                restoreCodeBlocks: function (text) {
+                    const pattern = new RegExp(PLACEHOLDER + "(\\d+)", "g");
+                    text = text.replace(pattern, (match, index) => {
+                        return codeBlocks[index];
+                    });
+                    codeBlocks = [];
+                    return text;
+                }
+            }
+        }
+
+        // 初始化方法
+        function init() {
+            // 给 textarea 添加事件监听，实时更新 HTML 预览内容和匹配到的单词列表
+            markdownInput.addEventListener('input', updatePreview);
+
+            function updatePreview() {
+                let content = markdownInput.value;
+                let allCodeContent = getAllCodeBlocksContent(content);
+                let codeWordCount = countWords(allCodeContent, wordRegex);
+                let textWordCount = countWords(content, wordRegex);
+
+
+                let codeBlock = CodeBlocks();
+                let htmlContent = md.render(content);
+                htmlContent = codeBlock.saveAndReplaceCodeBlocks(htmlContent);
+                // 高亮重复的单词
+                htmlContent = highlightRepeatedWords(codeWordCount, textWordCount, htmlContent);
+                htmlContent = codeBlock.restoreCodeBlocks(htmlContent)
+                // 更新 Markdown 预览
+                markdownPreview.innerHTML = htmlContent;
+            }
+
+            // 初始渲染一次
+            updatePreview();
+        }
+
+        // 初始化页面
+        init();
+    </script>
+</body>
+
+</html>
