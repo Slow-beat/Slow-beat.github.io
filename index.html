@@ -81,6 +81,7 @@
         <textarea id="markdownInput" placeholder="在这里输入 Markdown 文本...
 当前功能：
 1. 代码中出现的变量名、方法名在解释文本中会高亮显示（完全一致：绿色，仅大小写不一致：红色）
+2. 代码支持语法高亮（高亮不表示任何重复）
 "></textarea>
         <!-- 用于显示 Markdown 转换后的 HTML 预览 -->
         <div id="markdownPreview" class="markdown-body"></div>
@@ -88,7 +89,7 @@
 
     <!-- 版本、更新时间和作者链接 -->
     <div class="info">
-        当前版本：1.0.2<br>
+        当前版本：1.0.4<br>
         更新时间：2024/4/16<br>
         作者/反馈链接：<a href="https://applink.larkoffice.com/client/message/link/open?token=AmWL4ywfiwAEZhyaFgWEAAQ%3D"
             target="_blank">Liam</a>
@@ -116,24 +117,33 @@
         let infoBlock = document.querySelector('.info');
         // 正则匹配变量单词
         // let wordRegex = /[%]?\b[\w$][\w$%=\-]*\b/g;
-        let wordRegex = /\b[a-zA-Z$][\w$]*\b *\(( *\w+ *,?)+\)|%?\b[\w][\w%=\-]*\b|\b[a-zA-Z$][\w$]*\b/g;
+        let wordRegex = /\b[a-zA-Z$][\w\.]*\b *\(( *\w+ *,?)*\)|%?\b[\w][\w%=\.\-]*\b|\b[a-zA-Z$][\w$]*\b/g;
 
-        // 进行正则匹配并记录每个结果匹配次数
+        // 高亮重复单词
         function highlightRepeatedWords(codeWordCount, textWordCount, html) {
+            const regex = /\b([a-zA-Z$][\w\.]*)\b *\(((?: *\w+ *,?)*)\)/;
+            const codeWordSet = new Set(Object.keys(codeWordCount));
+
+            Object.keys(codeWordCount).forEach(t => {
+                let match = t.match(regex);
+                if (match) {
+                    codeWordSet.add(match[1]);
+                    match = match[2].match(/\w+/g);
+                    match.forEach(t => codeWordSet.add(t));
+                }
+            })
+
             // 创建一个 Set 来存储要检查的单词
-            const codeWordsSet = new Set(Object.keys(codeWordCount).map(word => word.toLowerCase()));
-            codeWordsSet.delete("class");
-            codeWordsSet.delete("code");
+            const codeWordLowerCaseSet = new Set(Array.from(codeWordSet).map(word => word.toLowerCase()));
+            codeWordLowerCaseSet.delete("class");
+            codeWordLowerCaseSet.delete("code");
 
             // 获取文本中的单词列表，并按字母顺序逆序排列
-            const textWords = Object.keys(textWordCount).sort((a, b) => {
-                return b.length - a.length || b.localeCompare(a);
-            }
-            );
+            const textWords = Object.keys(textWordCount).sort((a, b) => b.length - a.length || b.localeCompare(a));
             // 遍历文本中的单词
             for (let word of textWords) {
-                if (codeWordsSet.has(word.toLowerCase())) {
-                    if (codeWordCount[word]) {
+                if (codeWordLowerCaseSet.has(word.toLowerCase())) {
+                    if (codeWordSet.has(word)) {
                         // 完全一致
                         html = html.replaceAll(word, '<span class="repeatWordGreen">$&</span>');
                     } else {
