@@ -88,7 +88,7 @@
 
     <!-- 版本、更新时间和作者链接 -->
     <div class="info">
-        当前版本：1.0.1<br>
+        当前版本：1.0.2<br>
         更新时间：2024/4/16<br>
         作者/反馈链接：<a href="https://applink.larkoffice.com/client/message/link/open?token=AmWL4ywfiwAEZhyaFgWEAAQ%3D"
             target="_blank">Liam</a>
@@ -115,27 +115,30 @@
         // 获取信息块元素
         let infoBlock = document.querySelector('.info');
         // 正则匹配变量单词
-        // let wordRegex = /[\b|\s+]([\w\.\d@])+[\s+|\b]/g;
-        let wordRegex = /\b[\w$][\w\d$]*\b/g;
+        // let wordRegex = /[%]?\b[\w$][\w$%=\-]*\b/g;
+        let wordRegex = /\b[a-zA-Z$][\w$]*\b *\(( *\w+ *,?)+\)|%?\b[\w][\w%=\-]*\b|\b[a-zA-Z$][\w$]*\b/g;
 
         // 进行正则匹配并记录每个结果匹配次数
         function highlightRepeatedWords(codeWordCount, textWordCount, html) {
-            const set = new Set();
-            for (let word in codeWordCount) {
-                set.add(word.toLocaleLowerCase());
-            }
-            set.delete("class");
-            set.delete("code");
-            set.delete("code");
+            // 创建一个 Set 来存储要检查的单词
+            const codeWordsSet = new Set(Object.keys(codeWordCount).map(word => word.toLowerCase()));
+            codeWordsSet.delete("class");
+            codeWordsSet.delete("code");
 
-            for (let word in textWordCount) {
-                if (set.has(word.toLocaleLowerCase())) {
+            // 获取文本中的单词列表，并按字母顺序逆序排列
+            const textWords = Object.keys(textWordCount).sort((a, b) => {
+                return b.length - a.length || b.localeCompare(a);
+            }
+            );
+            // 遍历文本中的单词
+            for (let word of textWords) {
+                if (codeWordsSet.has(word.toLowerCase())) {
                     if (codeWordCount[word]) {
                         // 完全一致
-                        html = html.replace(new RegExp('\\b' + word + '\\b', 'g'), '<span class="repeatWordGreen">$&</span>');
+                        html = html.replaceAll(word, '<span class="repeatWordGreen">$&</span>');
                     } else {
                         // 大小写不一致
-                        html = html.replace(new RegExp('\\b' + word + '\\b', 'g'), '<span class="repeatWordYellow">$&</span>');
+                        html = html.replaceAll(word, '<span class="repeatWordYellow">$&</span>');
                     }
                 }
             }
