@@ -8,6 +8,9 @@
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
     <!-- 引入 github-markdown.css 样式 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.css">
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/default.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
     <!-- 一些简单的样式 -->
     <style>
         body {
@@ -85,15 +88,26 @@
 
     <!-- 版本、更新时间和作者链接 -->
     <div class="info">
-        当前版本：1.0.0<br>
-        更新时间：2024/4/15<br>
+        当前版本：1.0.1<br>
+        更新时间：2024/4/16<br>
         作者/反馈链接：<a href="https://applink.larkoffice.com/client/message/link/open?token=AmWL4ywfiwAEZhyaFgWEAAQ%3D"
             target="_blank">Liam</a>
     </div>
 
     <script>
         // 创建 markdown-it 实例
-        let md = window.markdownit();
+        let md = window.markdownit({
+            breaks: true,
+            highlight: function (str, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    try {
+                        return hljs.highlight(str, { language: lang, ignoreIllegals: true }).value;
+                    } catch (__) { }
+                }
+
+                return ''; // use external default escaping
+            }
+        });
         // 获取 textarea 元素
         let markdownInput = document.getElementById('markdownInput');
         // 获取用于显示 Markdown 预览的 div 元素
@@ -114,7 +128,6 @@
             set.delete("code");
             set.delete("code");
 
-            console.log(set);
             for (let word in textWordCount) {
                 if (set.has(word.toLocaleLowerCase())) {
                     if (codeWordCount[word]) {
