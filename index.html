@@ -8,8 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
     <!-- 引入 github-markdown.css 样式 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.css">
-    <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/default.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/default.min.css">
     <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
     <!-- 一些简单的样式 -->
     <style>
@@ -89,7 +88,7 @@
 
     <!-- 版本、更新时间和作者链接 -->
     <div class="info">
-        当前版本：1.0.4<br>
+        当前版本：1.1.0<br>
         更新时间：2024/4/16<br>
         作者/反馈链接：<a href="https://applink.larkoffice.com/client/message/link/open?token=AmWL4ywfiwAEZhyaFgWEAAQ%3D"
             target="_blank">Liam</a>
@@ -113,8 +112,7 @@
         let markdownInput = document.getElementById('markdownInput');
         // 获取用于显示 Markdown 预览的 div 元素
         let markdownPreview = document.getElementById('markdownPreview');
-        // 获取信息块元素
-        let infoBlock = document.querySelector('.info');
+
         // 正则匹配变量单词
         // let wordRegex = /[%]?\b[\w$][\w$%=\-]*\b/g;
         let wordRegex = /\b[a-zA-Z$][\w\.]*\b *\(( *\w+ *,?)*\)|%?\b[\w][\w%=\.\-]*\b|\b[a-zA-Z$][\w$]*\b/g;
@@ -129,37 +127,26 @@
                 if (match) {
                     codeWordSet.add(match[1]);
                     match = match[2].match(/\w+/g);
-                    match.forEach(t => codeWordSet.add(t));
+                    if (match) match.forEach(t => codeWordSet.add(t));
                 }
-            })
+            });
 
             // 创建一个 Set 来存储要检查的单词
             const codeWordLowerCaseSet = new Set(Array.from(codeWordSet).map(word => word.toLowerCase()));
             codeWordLowerCaseSet.delete("class");
             codeWordLowerCaseSet.delete("code");
 
-            // 获取文本中的单词列表，并按字母顺序逆序排列
-            const textWords = Object.keys(textWordCount).sort((a, b) => b.length - a.length || b.localeCompare(a));
-            // 遍历文本中的单词
-            for (let word of textWords) {
-                if (codeWordLowerCaseSet.has(word.toLowerCase())) {
-                    if (codeWordSet.has(word)) {
-                        // 完全一致
-                        html = html.replaceAll(word, '<span class="repeatWordGreen">$&</span>');
-                    } else {
-                        // 大小写不一致
-                        html = html.replaceAll(word, '<span class="repeatWordYellow">$&</span>');
-                    }
-                }
-            }
-            return html;
+            // 获取文本在代码中出现过的单词列表，并按单词列表长度降序排列
+            const textWords = Object.keys(textWordCount).filter(t => codeWordLowerCaseSet.has(t.toLocaleLowerCase())).sort((a, b) => b.length - a.length);
+            // 高亮处理
+            const needReplace = new RegExp(textWords.join("|"), "g");
+            return html.replace(needReplace, (match) => match ? codeWordSet.has(match) ? '<span class="repeatWordGreen">' + match + '</span>' : '<span class="repeatWordYellow">' + match + '</span>' : "");
         }
 
         // 获取所有代码块内容
         function getAllCodeBlocksContent(text) {
             const codeBlockPattern = /```[\s\S]*?```/g;
             let matches = text.match(codeBlockPattern);
-
             return matches ? Array.from(matches).join('\n') : "";
         }
 
@@ -169,8 +156,7 @@
             let matches = text.match(regex);
 
             for (let match of matches ? matches : []) {
-                wordCounts[match] = wordCounts[match] ? wordCounts[match] + 1 : [match];
-
+                wordCounts[match] = wordCounts[match] ? wordCounts[match] + 1 : 1;
             }
             return wordCounts;
         }
@@ -211,19 +197,19 @@
                 let content = markdownInput.value;
                 let allCodeContent = getAllCodeBlocksContent(content);
                 let codeWordCount = countWords(allCodeContent, wordRegex);
-                let textWordCount = countWords(content, wordRegex);
-
 
                 let codeBlock = CodeBlocks();
                 let htmlContent = md.render(content);
                 htmlContent = codeBlock.saveAndReplaceCodeBlocks(htmlContent);
+                let textWordCount = countWords(htmlContent, wordRegex);
+
                 // 高亮重复的单词
                 htmlContent = highlightRepeatedWords(codeWordCount, textWordCount, htmlContent);
                 htmlContent = codeBlock.restoreCodeBlocks(htmlContent)
                 // 更新 Markdown 预览
                 markdownPreview.innerHTML = htmlContent;
             }
-
+            
             // 初始渲染一次
             updatePreview();
         }
