@@ -8,7 +8,8 @@
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
     <!-- 引入 github-markdown.css 样式 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/default.min.css">
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/default.min.css">
     <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
     <!-- 一些简单的样式 -->
     <style>
@@ -22,9 +23,10 @@
         }
 
         #markdownInput,
-        #markdownPreview {
-            width: 50%;
-            height: 88vh;
+        #markdownPreview,
+        #checkProblemDiv {
+            width: 42%;
+            height: 95vh;
             border: 1px solid #ccc;
             border-radius: 5px;
             outline: none;
@@ -36,8 +38,13 @@
             overflow-y: auto;
         }
 
-        #markdownInput {
-            margin-right: 10px;
+        #checkProblemDiv {
+            width: 16%;
+            font-size: 16px;
+        }
+
+        #checkProblemUl li {
+            color: #e11010;
         }
 
         /* 定义重复单词的颜色 */
@@ -67,9 +74,11 @@
 
         /* 版本、更新时间和作者链接样式 */
         .info {
+            position: absolute;
+            bottom: 0;
             color: #777;
             font-size: 14px;
-            margin-top: 5px;
+            margin-bottom: 30px;
         }
     </style>
 </head>
@@ -80,25 +89,36 @@
         <textarea id="markdownInput" placeholder="在这里输入 Markdown 文本...
 当前功能：
 1. 代码中出现的变量名、方法名在解释文本中会高亮显示（完全一致：绿色，仅大小写不一致：红色）
-2. 代码支持语法高亮（高亮不表示任何重复）
+2. 代码支持语法高亮（代码中的高亮不表示任何重复）
+3. 对代码块的语言标签进行检查（不保证语言标签和代码语言的一致性）
 "></textarea>
+        <!-- 用于显示问题检查结果和版本信息 -->
+        <div id="checkProblemDiv">
+            <p>可能存在的问题：</p>
+            <!-- 版本、更新时间和作者链接 -->
+            <ul id="checkProblemUl"></ul>
+            <div class="info">
+                当前版本：1.3.0<br>
+                更新时间：2024/4/19<br>
+                作者/反馈链接：<a
+                    href="https://applink.larkoffice.com/client/message/link/open?token=AmWL4ywfiwAEZhyaFgWEAAQ%3D"
+                    target="_blank">Liam</a>
+            </div>
+        </div>
         <!-- 用于显示 Markdown 转换后的 HTML 预览 -->
         <div id="markdownPreview" class="markdown-body"></div>
-    </div>
 
-    <!-- 版本、更新时间和作者链接 -->
-    <div class="info">
-        当前版本：1.1.1<br>
-        更新时间：2024/4/17<br>
-        作者/反馈链接：<a href="https://applink.larkoffice.com/client/message/link/open?token=AmWL4ywfiwAEZhyaFgWEAAQ%3D"
-            target="_blank">Liam</a>
     </div>
 
     <script>
+        const languageList = ["python", "sql", "java", "javascript", "c", "cpp", "go", "bash", "css", "html", "typescrip"];
+        const goodLanguageSet = new Set(languageList);
+        const codeLanguageSet = new Set();
         // 创建 markdown-it 实例
         let md = window.markdownit({
             breaks: true,
             highlight: function (str, lang) {
+                codeLanguageSet.add(lang);
                 if (lang && hljs.getLanguage(lang)) {
                     try {
                         return hljs.highlight(str, { language: lang, ignoreIllegals: true }).value;
@@ -110,27 +130,72 @@
         });
         // 获取 textarea 元素
         let markdownInput = document.getElementById('markdownInput');
+        // 获取用于显示问题检查结果和版本信息的 div 元素
+        let checkProblemUl = document.getElementById('checkProblemUl');
         // 获取用于显示 Markdown 预览的 div 元素
         let markdownPreview = document.getElementById('markdownPreview');
 
+        // todo
+        const getMatchBclokList = function (regex, matchGroupIndex) {
+            return function (text) {
+                let result = [];
+                let match = text.match(regex);
+                if (match) {
+                    for (let index of matchGroupIndex) {
+                        if (match[index]) {
+                            result.add(match[index]);
+                        }
+                    }
+                }
+                return result;
+            }
+        }
+
         // 正则匹配变量单词
-        // let wordRegex = /[%]?\b[\w$][\w$%=\-]*\b/g;
-        let wordRegex = /\b[a-zA-Z$][\w\.]*\b *\(( *\w+ *,?)*\)|%?\b[\w][\w%=\.\-]*\b|\b[a-zA-Z$][\w$]*\b/g;
+        let allRegex = [
+            {
+                pattern: `\\b[a-zA-Z$][\\w\\.]*\\b *\\(( *\\w+ *,?)*\\)`,
+                description: "匹配方法以及相关变量",
+
+                extensionJuge: function (word, extra) {
+                    const regex = /\b([a-zA-Z$][\w\.]*)\b *\(((?: *\w+ *,?)*)\)/;
+
+                    let match = word.match(regex);
+                    if (match) {
+                        extra.add(match[1]);
+                        match = match[2].match(/\w+/g);
+                        if (match) match.forEach(t => extra.add(t));
+                    }
+
+                }
+            }, {
+                pattern: `%?\\b[\\w][\\w%=\\.\\-]*\\b`,
+                description: "匹配变量1",
+            }, {
+                pattern: `\\b[a-zA-Z$][\\w$]*\\b`,
+                description: "匹配变量2",
+            }
+        ]
+        // let wordRegex = /\b[a-zA-Z$][\w\.]*\b *\(( *\w+ *,?)*\)|%?\b[\w][\w%=\.\-]*\b|\b[a-zA-Z$][\w$]*\b/g;
+        // let wordRegex = /\\b[a-zA-Z$][\\w\\.]*\\b *\\(( *\\w+ *,?)*\\)|%?\\b[\\w][\\w%=\\.\\-]*\\b|\\b[a-zA-Z$][\\w$]*\\b/g;
+        let wordRegexStr = allRegex.map(t => t.pattern).join("|");
+        let wordRegex = new RegExp(wordRegexStr, 'g');
+        console.log(wordRegex);
+
+
 
         // 高亮重复单词
         function highlightRepeatedWords(codeWordCount, textWordCount, html) {
-            const regex = /\b([a-zA-Z$][\w\.]*)\b *\(((?: *\w+ *,?)*)\)/;
             const codeWordSet = new Set(Object.keys(codeWordCount));
 
-            Object.keys(codeWordCount).forEach(t => {
-                let match = t.match(regex);
-                if (match) {
-                    codeWordSet.add(match[1]);
-                    match = match[2].match(/\w+/g);
-                    if (match) match.forEach(t => codeWordSet.add(t));
-                }
+            Object.keys(codeWordCount).forEach(word => {
+                allRegex.forEach(regexObj => {
+                    if (regexObj.extensionJuge && word.match(regexObj.pattern)) {
+                        regexObj.extensionJuge(word, codeWordSet);
+                    };
+                });
             });
-     
+
             // 创建一个 Set 来存储要检查的单词
             const codeWordLowerCaseSet = new Set(Array.from(codeWordSet).map(word => word.toLowerCase()));
             // 获取文本在代码中出现过的单词列表，并按单词列表长度降序排列
@@ -160,24 +225,24 @@
 
         function CodeBlocks() {
             let codeBlocks = [];
-            const PLACEHOLDER = "PLACEHOLDER";
+            const PLACEHOLDER = "@PLACEHOLDER@";
             return {
                 // 保存代码块并替换为占位符
                 saveAndReplaceCodeBlocks: function (text) {
                     // 匹配 ``` 开始的代码块
                     var codeBlockPattern = /<pre[\s\S]*?<\/pre>/g;
-                    var index = 0;
                     text = text.replace(codeBlockPattern, function (codeBlock) {
                         codeBlocks.push(codeBlock);
-                        return PLACEHOLDER + index++;
+                        return PLACEHOLDER;
                     });
                     return text;
                 },
                 // 恢复被替换的代码块
                 restoreCodeBlocks: function (text) {
-                    const pattern = new RegExp(PLACEHOLDER + "(\\d+)", "g");
-                    text = text.replace(pattern, (match, index) => {
-                        return codeBlocks[index];
+                    const pattern = new RegExp(PLACEHOLDER, "g");
+                    let index = 0;
+                    text = text.replace(pattern, (match) => {
+                        return codeBlocks[index++];
                     });
                     codeBlocks = [];
                     return text;
@@ -191,6 +256,8 @@
             markdownInput.addEventListener('input', updatePreview);
 
             function updatePreview() {
+                // 清除代码语言记录
+                codeLanguageSet.clear();
                 let content = markdownInput.value;
                 let allCodeContent = getAllCodeBlocksContent(content);
                 let codeWordCount = countWords(allCodeContent, wordRegex);
@@ -205,6 +272,16 @@
                 htmlContent = codeBlock.restoreCodeBlocks(htmlContent)
                 // 更新 Markdown 预览
                 markdownPreview.innerHTML = htmlContent;
+
+                checkProblem();
+                function checkProblem() {
+                    checkProblemUl.innerHTML = ''; // 清空之前的内容
+                    let listItem = document.createElement('li');
+                    if (codeLanguageSet.size !== codeLanguageSet.intersection(goodLanguageSet).size) {
+                        listItem.textContent = "语言标签存在问题：" + Array.from(codeLanguageSet).filter(t => !goodLanguageSet.has(t)).join(",");
+                        checkProblemUl.appendChild(listItem);
+                    }
+                }
             }
 
             // 初始渲染一次
