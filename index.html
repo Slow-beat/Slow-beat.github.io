@@ -115,16 +115,17 @@
         // 支持的代码块语言标签
         const languageList = ["", "python", "sql", "java", "javascript", "c", "cpp", "go", "bash", "css", "html", "typescript"];
         // 正则匹配变量单词
-        // let wordRegex = \b[\w$\.]*\b *\(( *\w+ *,?)*\)|%?\b[\w%=\.\-]*\b;
-        // let wordRegex = \\b[\\w$\\.]*\\b *\\(( *\\w+ *,?)*\\)|%?\\b[\\w%=\\.\\-]*\\b;
+        // let wordRegex = \b[\w$\.]*\b\s*\((?:\s*\w+\s*(?:,\s*\w+\s*))?\)|%?\b[\w%=\.\-]*\b|\b\w+\b;
+        // let wordRegex = \\b[\\w$\\.]*\\b\\s*\\((?:\\s*\\w+\\s*(?:,\\s*\\w+\\s*))?\\)|%?\\b[\\w%=\\.\\-]*\\b|\\b\\w+\\b;
         let allRegex = [
             {
-                pattern: `\\b[\\w$\\.]*\\b *\\(( *\\w+ *,?)*\\)`,
+                pattern: `\\b[\\w$\\.]*\\b\\s*\\((?:\\s*\\w+\\s*(?:,\\s*\\w+\\s*))?\\)`,
                 description: "匹配方法",
             }, {
                 pattern: `%?\\b[\\w%=\\.\\-]*\\b`,
                 description: "匹配连接单词",
             }, {
+                // 匹配连接单词的正则能够匹配 ab.c，匹配单词的正则则使 ab、c 分别被匹配
                 pattern: `\\b\\w+\\b`,
                 description: "匹配单词",
             }
@@ -252,6 +253,22 @@
 
         // 初始化页面
         init();
+
+        function TimeTracker() {
+            // 记录创建时的时间戳
+            let startTime = Date.now();
+
+            // 返回时间差的方法
+            this.getTimeDifference = function () {
+                // 计算当前时间与创建时的时间差
+                let currentTime = Date.now();
+                let timeDifference = currentTime - startTime;
+
+                // 返回时间差（毫秒）
+                return timeDifference;
+            };
+        }
+
     </script>
 </body>
 
