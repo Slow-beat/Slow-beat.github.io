@@ -87,10 +87,12 @@
     <div class="container">
         <!-- 用于编辑 Markdown 的文本框 -->
         <textarea id="markdownInput" placeholder="在这里输入 Markdown 文本...
-当前功能：
+
+当前支持的功能：
 1. 代码中出现的变量名、方法名在解释文本中会高亮显示（完全一致：绿色，仅大小写不一致：红色）
 2. 代码支持语法高亮（代码中的高亮不表示任何重复）
 3. 对代码块的语言标签进行检查（不保证语言标签和代码语言的一致性）
+4. 对文本中出现的半角逗号进行检查
 "></textarea>
         <!-- 用于显示问题检查结果和版本信息 -->
         <div id="checkProblemDiv">
@@ -98,8 +100,8 @@
             <!-- 版本、更新时间和作者链接 -->
             <ul id="checkProblemUl"></ul>
             <div class="info">
-                当前版本：2.1.0<br>
-                更新时间：2024/4/22<br>
+                当前版本：2.2.0<br>
+                更新时间：2024/4/24<br>
                 作者/反馈链接：<a
                     href="https://applink.larkoffice.com/client/message/link/open?token=AmWL4ywfiwAEZhyaFgWEAAQ%3D"
                     target="_blank">Liam</a>
@@ -107,7 +109,6 @@
         </div>
         <!-- 用于显示 Markdown 转换后的 HTML 预览 -->
         <div id="markdownPreview" class="markdown-body"></div>
-
     </div>
 
     <script>
@@ -132,6 +133,7 @@
         ]
 
         // -------- 全局配置部分 end --------
+        const PLACEHOLDER = "@PLACEHOLDER@";
         const goodLanguageSet = new Set(languageList);
         const codeLanguageSet = new Set();
         let md = window.markdownit({
@@ -193,7 +195,6 @@
 
         function CodeBlocks() {
             const codeBlockPattern = /<pre[\s\S]*?<\/pre>/g;
-            const PLACEHOLDER = "@PLACEHOLDER@";
             const pattern = new RegExp(PLACEHOLDER, "g");
             let codeBlocks = [];
             return {
@@ -232,6 +233,8 @@
                 let textWordSet = getWordSet(allContent.textContent);
                 // 将代码部分使用占位符
                 let htmlWithNoCode = codeBlock.saveAndReplaceCodeBlocks(md.render(content));
+                // 特殊处理 将代码块占位符放入textWordSet 避免
+                textWordSet.add(PLACEHOLDER);
                 // 高亮重复的单词
                 htmlWithNoCode = highlightRepeatedWords(codeWordSet, textWordSet, htmlWithNoCode);
                 // 恢复代码
@@ -243,9 +246,27 @@
                 function checkProblem() {
                     // 清空之前的内容
                     checkProblemUl.innerHTML = '';
-                    let listItem = document.createElement('li');
-                    if (codeLanguageSet.size !== codeLanguageSet.intersection(goodLanguageSet).size) {
-                        listItem.textContent = "语言标签存在问题：" + Array.from(codeLanguageSet).filter(t => !goodLanguageSet.has(t)).join(",");
+                    
+                    checkLanguageTag();
+                    checkIllegalCharacter();
+
+                    function checkLanguageTag() {
+                        if (codeLanguageSet.size !== codeLanguageSet.intersection(goodLanguageSet).size) {
+                            addProblem("语言标签存在问题：" + Array.from(codeLanguageSet).filter(t => !goodLanguageSet.has(t)).join(","));
+                        }
+                    }
+
+                    function checkIllegalCharacter() {
+                        const content = allContent.textContent;
+                        const match = content.match(/\W{1,2},|,\W{1,2}/g);
+                        for (const iterator of match || []) {
+                            addProblem("存在英文逗号：" + iterator);
+                        }
+                    }
+
+                    function addProblem(content) {
+                        let listItem = document.createElement('li');
+                        listItem.textContent = content;
                         checkProblemUl.appendChild(listItem);
                     }
                 }
