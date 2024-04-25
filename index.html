@@ -8,6 +8,11 @@
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
     <!-- 引入 github-markdown.css 样式 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.css">
+    
+    <!-- 引入 公式渲染插件和样式 -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/markdown-it-katex@2.0.3/index.min.js"></script> -->
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.5.1/katex.min.css"> -->
+
     <!-- 引入 highlightjs 样式和脚本 -->
     <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/default.min.css">
@@ -116,11 +121,11 @@
         // 支持的代码块语言标签
         const languageList = ["", "python", "sql", "java", "javascript", "c", "cpp", "go", "bash", "css", "html", "typescript"];
         // 正则匹配变量单词
-        // let wordRegex = \b[\w$\.]*\b\s*\((?:\s*\w+\s*(?:,\s*\w+\s*))?\)|%?\b[\w%=\.\-]*\b|\b\w+\b;
-        // let wordRegex = \\b[\\w$\\.]*\\b\\s*\\((?:\\s*\\w+\\s*(?:,\\s*\\w+\\s*))?\\)|%?\\b[\\w%=\\.\\-]*\\b|\\b\\w+\\b;
+        // let wordRegex = \b[\w$\.]*\b\s*\((?:\s*\w+\s*(?:,\s*\w+\s*)?)?\)|%?\b[\w%=\.\-]*\b|\b\w+\b;
+        // let wordRegex = \\b[\\w$\\.]*\\b\\s*\\((?:\\s*\\w+\\s*(?:,\\s*\\w+\\s*)?)?\\)|%?\\b[\\w%=\\.\\-]*\\b|\\b\\w+\\b;
         let allRegex = [
             {
-                pattern: `\\b[\\w$\\.]*\\b\\s*\\((?:\\s*\\w+\\s*(?:,\\s*\\w+\\s*))?\\)`,
+                pattern: `\\b[\\w$\\.]*\\b\\s*\\((?:\\s*\\w+\\s*(?:,\\s*\\w+\\s*)?)?\\)`,
                 description: "匹配方法",
             }, {
                 pattern: `%?\\b[\\w%=\\.\\-]*\\b`,
@@ -154,6 +159,9 @@
 
         // 高亮重复单词
         function highlightRepeatedWords(codeWordSet, textWordSet, html) {
+            // console.log(codeWordSet);
+            // console.log(textWordSet);
+
             // 创建一个 Set 来存储要检查的单词
             const codeWordLowerCaseSet = new Set(Array.from(codeWordSet).map(word => word.toLowerCase()));
             // 获取文本在代码中出现过的单词列表，并按单词列表长度降序排列
@@ -176,7 +184,7 @@
 
         // 获取所有代码块内容
         function splitContent(text) {
-            const codeBlockPattern = /```[\s\S]*?```/g;
+            const codeBlockPattern = /(?<=```\w*\n)[\s\S]*?(?=```)/g;
             let matches = text.match(codeBlockPattern);
             return {
                 codeContent: matches ? Array.from(matches).join('\n') : "",
@@ -246,7 +254,7 @@
                 function checkProblem() {
                     // 清空之前的内容
                     checkProblemUl.innerHTML = '';
-                    
+
                     checkLanguageTag();
                     checkIllegalCharacter();
 
@@ -258,7 +266,7 @@
 
                     function checkIllegalCharacter() {
                         const content = allContent.textContent;
-                        const match = content.match(/\W{1,2},|,\W{1,2}/g);
+                        const match = content.match(/[^\w\s]{1,2},|,[^\w\s]{1,2}/g);
                         for (const iterator of match || []) {
                             addProblem("存在英文逗号：" + iterator);
                         }
