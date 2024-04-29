@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
     <!-- 引入 github-markdown.css 样式 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.css">
-    
+
     <!-- 引入 公式渲染插件和样式 -->
     <!-- <script src="https://cdn.jsdelivr.net/npm/markdown-it-katex@2.0.3/index.min.js"></script> -->
     <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.5.1/katex.min.css"> -->
@@ -97,7 +97,7 @@
 1. 代码中出现的变量名、方法名在解释文本中会高亮显示（完全一致：绿色，仅大小写不一致：红色）
 2. 代码支持语法高亮（代码中的高亮不表示任何重复）
 3. 对代码块的语言标签进行检查（不保证语言标签和代码语言的一致性）
-4. 对文本中出现的半角逗号进行检查
+4. 对文本中出现的英文标点（半角）符号进行检查
 "></textarea>
         <!-- 用于显示问题检查结果和版本信息 -->
         <div id="checkProblemDiv">
@@ -105,8 +105,8 @@
             <!-- 版本、更新时间和作者链接 -->
             <ul id="checkProblemUl"></ul>
             <div class="info">
-                当前版本：2.2.0<br>
-                更新时间：2024/4/24<br>
+                当前版本：2.2.1<br>
+                更新时间：2024/4/29<br>
                 作者/反馈链接：<a
                     href="https://applink.larkoffice.com/client/message/link/open?token=AmWL4ywfiwAEZhyaFgWEAAQ%3D"
                     target="_blank">Liam</a>
@@ -119,7 +119,7 @@
     <script>
         // -------- 全局配置部分 start --------
         // 支持的代码块语言标签
-        const languageList = ["", "python", "sql", "java", "javascript", "c", "cpp", "go", "bash", "css", "html", "typescript"];
+        const languageList = ["", "python", "sql", "java", "javascript", "c", "cpp", "go", "bash", "css", "html", "typescript", "vue"];
         // 正则匹配变量单词
         // let wordRegex = \b[\w$\.]*\b\s*\((?:\s*\w+\s*(?:,\s*\w+\s*)?)?\)|%?\b[\w%=\.\-]*\b|\b\w+\b;
         // let wordRegex = \\b[\\w$\\.]*\\b\\s*\\((?:\\s*\\w+\\s*(?:,\\s*\\w+\\s*)?)?\\)|%?\\b[\\w%=\\.\\-]*\\b|\\b\\w+\\b;
@@ -266,9 +266,9 @@
 
                     function checkIllegalCharacter() {
                         const content = allContent.textContent;
-                        const match = content.match(/[^\w\s]{1,2},|,[^\w\s]{1,2}/g);
+                        const match = content.match(/[^\w\s]{1,2}[,:]|[,:][^\w\s]{1,2}/g);
                         for (const iterator of match || []) {
-                            addProblem("存在英文逗号：" + iterator);
+                            addProblem("存在英文标点符号：" + iterator);
                         }
                     }
 
