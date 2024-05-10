@@ -105,8 +105,8 @@
             <!-- 版本、更新时间和作者链接 -->
             <ul id="checkProblemUl"></ul>
             <div class="info">
-                当前版本：2.2.1<br>
-                更新时间：2024/4/29<br>
+                当前版本：2.3.0<br>
+                更新时间：2024/5/10<br>
                 作者/反馈链接：<a
                     href="https://applink.larkoffice.com/client/message/link/open?token=AmWL4ywfiwAEZhyaFgWEAAQ%3D"
                     target="_blank">Liam</a>
@@ -121,11 +121,11 @@
         // 支持的代码块语言标签
         const languageList = ["", "python", "sql", "java", "javascript", "c", "cpp", "go", "bash", "css", "html", "typescript", "vue"];
         // 正则匹配变量单词
-        // let wordRegex = \b[\w$\.]*\b\s*\((?:\s*\w+\s*(?:,\s*\w+\s*)?)?\)|%?\b[\w%=\.\-]*\b|\b\w+\b;
-        // let wordRegex = \\b[\\w$\\.]*\\b\\s*\\((?:\\s*\\w+\\s*(?:,\\s*\\w+\\s*)?)?\\)|%?\\b[\\w%=\\.\\-]*\\b|\\b\\w+\\b;
+        // let wordRegex = \b[\w$\.]*\b\s*\((?:\s*\w+\s*(?:,\s*\w+\s*)*)?\)|%?\b[\w%=\.\-]*\b|\b\w+\b;
+        // let wordRegex = \\b[\\w$\\.]*\\b\\s*\\((?:\\s*\\w+\\s*(?:,\\s*\\w+\\s*)*)?\\)|%?\\b[\\w%=\\.\\-]*\\b|\\b\\w+\\b;
         let allRegex = [
             {
-                pattern: `\\b[\\w$\\.]*\\b\\s*\\((?:\\s*\\w+\\s*(?:,\\s*\\w+\\s*)?)?\\)`,
+                pattern: `\\b[\\w$\\.]*\\b\\s*\\((?:\\s*\\w+\\s*(?:,\\s*\\w+\\s*)*)?\\)`,
                 description: "匹配方法",
             }, {
                 pattern: `%?\\b[\\w%=\\.\\-]*\\b`,
@@ -257,6 +257,7 @@
 
                     checkLanguageTag();
                     checkIllegalCharacter();
+                    javaCheck();
 
                     function checkLanguageTag() {
                         if (codeLanguageSet.size !== codeLanguageSet.intersection(goodLanguageSet).size) {
@@ -270,6 +271,14 @@
                         for (const iterator of match || []) {
                             addProblem("存在英文标点符号：" + iterator);
                         }
+                    }
+
+                    function javaCheck() {
+                        const content = allContent.codeContent;
+
+                        const match = content.match(/public\s+class/g);
+                        if (match && match.length > 1)
+                            addProblem("Java：存在多个公共类");
                     }
 
                     function addProblem(content) {
